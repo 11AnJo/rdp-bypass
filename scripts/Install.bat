@@ -43,41 +43,6 @@ if not exist "%SRC32%" if not exist "%SRC64%" (
 )
 
 :: ============================================================
-::  Explain what will happen, then ask for consent
-:: ============================================================
-echo ============================================================
-echo   RdpBypass  -  run software over Remote Desktop
-echo ============================================================
-echo.
-echo   Some programs refuse to run in a Remote Desktop session.
-echo   RdpBypass loads a small DLL that makes Windows report your
-echo   session as a local console, so those programs start normally.
-echo   It is open source under the MIT license.
-echo.
-echo   This installer will:
-echo     1. Copy the hook DLL(s) into %INSTALL_DIR%
-echo     2. Register them with the Windows AppInit_DLLs mechanism, by
-echo        setting these values under HKLM...\Windows NT\CurrentVersion\Windows:
-echo          - AppInit_DLLs                 (adds the DLL path)
-echo          - LoadAppInit_DLLs = 1         (enables AppInit loading)
-echo          - RequireSignedAppInit_DLLs = 0 (allows the unsigned DLL to load)
-echo.
-echo   Before changing anything it saves the current values to a backup
-echo   file, and Uninstall.bat restores them and removes the files.
-echo.
-if "%OS64%"=="1" (echo   Detected: 64-bit Windows) else (echo   Detected: 32-bit Windows)
-echo.
-set /p "CONFIRM=Type Y to install, or anything else to cancel: "
-if /i not "%CONFIRM%"=="Y" (
-    echo.
-    echo Cancelled. Nothing was changed.
-    echo.
-    pause
-    exit /b 0
-)
-echo.
-
-:: ============================================================
 ::  Create install directory
 :: ============================================================
 if not exist "%INSTALL_DIR%" (
