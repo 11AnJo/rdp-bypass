@@ -7,8 +7,8 @@ title RdpBypass - Uninstaller
 :: ============================================================
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] This script must be run as administrator.
-    echo         Right-click -^> Run as administrator
+    echo This uninstaller needs administrator rights because it writes to HKEY_LOCAL_MACHINE.
+    echo Please close this window and run Uninstall.bat again via right-click -^> Run as administrator.
     echo.
     pause
     exit /b 1
@@ -25,24 +25,27 @@ set "OS64=0"
 if defined ProgramFiles(x86) set "OS64=1"
 
 echo ============================================================
-echo   RdpBypass - Uninstaller (x86 + x64)
+echo   RdpBypass - Uninstaller
 echo ============================================================
+echo.
+echo   This restores the registry values saved at install time and
+echo   removes the DLLs from %INSTALL_DIR%.
 echo.
 
 :: ============================================================
 ::  Uninstall 32-bit
 :: ============================================================
 if "%OS64%"=="1" (
-    call :uninstall_arch "RdpBypass32.dll" "%KEY_WOW%" "backup32.reg.txt" "x86"
+    call :uninstall_arch "RdpBypass32.dll" "%KEY_WOW%" "backup32.reg.txt" "32-bit apps"
 ) else (
-    call :uninstall_arch "RdpBypass32.dll" "%KEY_NATIVE%" "backup32.reg.txt" "x86"
+    call :uninstall_arch "RdpBypass32.dll" "%KEY_NATIVE%" "backup32.reg.txt" "32-bit apps"
 )
 
 :: ============================================================
 ::  Uninstall 64-bit (64-bit OS only)
 :: ============================================================
 if "%OS64%"=="1" (
-    call :uninstall_arch "RdpBypass64.dll" "%KEY_NATIVE%" "backup64.reg.txt" "x64"
+    call :uninstall_arch "RdpBypass64.dll" "%KEY_NATIVE%" "backup64.reg.txt" "64-bit apps"
 )
 
 :: ============================================================
@@ -51,14 +54,15 @@ if "%OS64%"=="1" (
 if exist "%INSTALL_DIR%" (
     rd /q "%INSTALL_DIR%" 2>nul
     if not exist "%INSTALL_DIR%" (
-        echo [Uninstall] Removed directory: %INSTALL_DIR%
+        echo Removed folder: %INSTALL_DIR%
     ) else (
-        echo [WARN] Directory not empty or in use ^(DLL may still be loaded^); remove after reboot: %INSTALL_DIR%
+        echo Could not remove %INSTALL_DIR% yet ^(a DLL may still be loaded^); delete it after a reboot.
     )
 )
 
 echo.
-echo   Uninstall complete.
+echo   Done. RdpBypass has been removed and the registry restored.
+echo   A reboot clears the DLL out of any processes still using it.
 echo.
 pause
 exit /b 0
@@ -74,9 +78,8 @@ set "U_DLLPATH=%INSTALL_DIR%\%~1"
 set "U_BACKUP=%INSTALL_DIR%\%~3"
 set "U_LABEL=%~4"
 
-echo ------------------------------------------------------------
-echo   [%U_LABEL%] %U_KEY%
-echo ------------------------------------------------------------
+echo.
+echo --- Removing the hook for %U_LABEL% (%U_DLLNAME%) ---
 
 :: --- Read backup ---
 set "BAK_APPINIT="
@@ -90,7 +93,7 @@ if exist "%U_BACKUP%" (
         if "%%a"=="LoadAppInit_DLLs" set "BAK_LOAD=%%b"
         if "%%a"=="RequireSignedAppInit_DLLs" set "BAK_SIGNED=%%b"
     )
-    echo [Info] Loaded pre-install backup
+    echo   Loaded the pre-install backup
 )
 
 :: --- Remove our DLL from AppInit_DLLs (or restore from backup) ---
@@ -108,9 +111,9 @@ if !errorlevel! equ 0 (
         for /f "tokens=*" %%x in ("!NEW_APPINIT!") do set "NEW_APPINIT=%%x"
         reg add "%U_KEY%" /v AppInit_DLLs /t REG_SZ /d "!NEW_APPINIT!" /f >nul
     )
-    echo [Uninstall] Removed DLL path from AppInit_DLLs
+    echo   Removed the DLL from AppInit_DLLs
 ) else (
-    echo [Skip] AppInit_DLLs does not contain this DLL
+    echo   AppInit_DLLs did not list this DLL
 )
 
 :: --- Restore LoadAppInit_DLLs ---
@@ -118,16 +121,16 @@ if "!HAS_BACKUP!"=="1" (
     if defined BAK_LOAD (
         set /a "RESTORE_LOAD=!BAK_LOAD!" 2>nul
         reg add "%U_KEY%" /v LoadAppInit_DLLs /t REG_DWORD /d !RESTORE_LOAD! /f >nul
-        echo [Uninstall] LoadAppInit_DLLs restored from backup
+        echo   Restored LoadAppInit_DLLs from backup
     )
 ) else (
     set "REMAINING="
     for /f "tokens=2*" %%a in ('reg query "%U_KEY%" /v AppInit_DLLs 2^>nul ^| findstr AppInit_DLLs') do set "REMAINING=%%b"
     if "!REMAINING!"=="" (
         reg add "%U_KEY%" /v LoadAppInit_DLLs /t REG_DWORD /d 0 /f >nul
-        echo [Uninstall] AppInit_DLLs empty; set LoadAppInit_DLLs = 0
+        echo   AppInit_DLLs is now empty; disabled AppInit loading
     ) else (
-        echo [Skip] AppInit_DLLs still has other entries; keeping LoadAppInit_DLLs
+        echo   AppInit_DLLs still has other entries; left AppInit loading as-is
     )
 )
 
@@ -136,7 +139,7 @@ if "!HAS_BACKUP!"=="1" (
     if defined BAK_SIGNED (
         set /a "RESTORE_SIGNED=!BAK_SIGNED!" 2>nul
         reg add "%U_KEY%" /v RequireSignedAppInit_DLLs /t REG_DWORD /d !RESTORE_SIGNED! /f >nul
-        echo [Uninstall] RequireSignedAppInit_DLLs restored from backup
+        echo   Restored RequireSignedAppInit_DLLs from backup
     )
 )
 
@@ -144,9 +147,9 @@ if "!HAS_BACKUP!"=="1" (
 if exist "%U_DLLPATH%" (
     del /f /q "%U_DLLPATH%" 2>nul
     if exist "%U_DLLPATH%" (
-        echo [WARN] DLL in use; remove after reboot: %U_DLLPATH%
+        echo   The DLL is still in use; it will be removable after a reboot: %U_DLLPATH%
     ) else (
-        echo [Uninstall] Deleted DLL: %U_DLLPATH%
+        echo   Deleted %U_DLLNAME%
     )
 )
 if exist "%U_BACKUP%" del /f /q "%U_BACKUP%" 2>nul

@@ -137,18 +137,23 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: rdp-bypass-bundle.zip
+          files: |
+            dlls/RdpBypass32.dll
+            dlls/RdpBypass64.dll
+            scripts/Install.bat
+            scripts/Uninstall.bat
+            rdp-bypass-bundle.zip
           generate_release_notes: true
           body: |
             ## RdpBypass ${{ github.ref_name }}
 
-            Unzip, then right-click `Install.bat` -> Run as administrator (installs x86 + x64).
+            Download the two DLLs plus `Install.bat` and `Uninstall.bat` (or grab `rdp-bypass-bundle.zip`, which has all of them). Put them in one folder, then right-click `Install.bat` -> Run as administrator. Installs x86 + x64.
 
-            ### Contents
+            ### Files
             | File | Description |
             |------|-------------|
             | `RdpBypass32.dll` | Hook DLL (x86, statically linked, depends only on kernel32 + user32) |
             | `RdpBypass64.dll` | Hook DLL (x64, statically linked, depends only on kernel32 + user32) |
-            | `Install.bat` | One-click install for x86 + x64 (idempotent, backs up the registry) |
-            | `Uninstall.bat` | One-click uninstall (restores from backup) |
-            | `README.md` | Usage |
+            | `Install.bat` | Installs both DLLs (idempotent, backs up the registry first) |
+            | `Uninstall.bat` | Removes them and restores the registry from backup |
+            | `rdp-bypass-bundle.zip` | All of the above in one download |
